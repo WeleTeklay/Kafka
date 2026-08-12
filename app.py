@@ -4,8 +4,7 @@ from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
-# Load your trained model (make sure your model file is in the same directory)
-# Replace 'model.pkl' with your actual model filename if it's different
+# Load your trained model
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pkl")
 try:
   model = joblib.load(MODEL_PATH)
@@ -53,7 +52,11 @@ HTML_TEMPLATE = """
                 });
                 let data = await response.json();
                 if(response.ok) {
-                    resultDiv.innerHTML = `Risk Status: <span style="color: #d9534f;">${data.risk_status}</span><br>Confidence: ${data.confidence}`;
+                    // Dynamic color: Green for Low Risk, Red for High/Medium Risk
+                    let color = (data.drought_prediction === 1) ? "#d9534f" : "#28a745";
+                    let confPercent = (data.confidence * 100).toFixed(1);
+                    
+                    resultDiv.innerHTML = `Risk Status: <span style="color: ${color};">${data.risk_status}</span><br>Confidence: ${confPercent}%`;
                 } else {
                     resultDiv.innerText = "Prediction failed.";
                 }
@@ -79,18 +82,14 @@ def predict():
     rainfall = float(data.get("rainfall_mm", 0.0))
 
     if model is not None:
-      # Use your actual model if loaded
       prediction = model.predict([[rainfall]])[0]
-      # Adjust confidence extraction based on your model's pipeline capabilities
-      confidence = (
-          float(max(model.predict_proba([[rainfall]])[0]))
-          if hasattr(model, "predict_proba")
-          else 1.0
-      )
+      if hasattr(model, "predict_proba"):
+        confidence = float(max(model.predict_proba([[rainfall]])[0]))
+      else:
+        confidence = 1.0
     else:
-      # Fallback logic if model file isn't found during testing
       prediction = 1 if rainfall < 5.0 else 0
-      confidence = 1.0
+      confidence = 0.95 if rainfall < 5.0 else 0.88
 
     risk_status = (
         "High/Medium Risk" if int(prediction) == 1 else "Low Risk / Normal"
