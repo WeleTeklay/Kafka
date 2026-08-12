@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-08-12T19:20:03.917209Z",
+  "regions": [
+    {
+      "region": "Tigray",
+      "recent_avg_rainfall_mm": 9.8,
+      "historical_avg_rainfall_mm": 8.6,
+      "deficit_pct": -13.7,
+      "predicted_next_period_mm": 24.5,
+      "risk_level": "Low"
+    },
+    {
+      "region": "Amhara",
+      "recent_avg_rainfall_mm": 17.8,
+      "historical_avg_rainfall_mm": 19.3,
+      "deficit_pct": 7.8,
+      "predicted_next_period_mm": 38.8,
+      "risk_level": "Low"
+    },
+    {
+      "region": "Oromia",
+      "recent_avg_rainfall_mm": 5.1,
+      "historical_avg_rainfall_mm": 5.5,
+      "deficit_pct": 6.3,
+      "predicted_next_period_mm": 10.5,
+      "risk_level": "Low"
+    },
+    {
+      "region": "SNNPR",
+      "recent_avg_rainfall_mm": 13.3,
+      "historical_avg_rainfall_mm": 14.6,
+      "deficit_pct": 8.8,
+      "predicted_next_period_mm": 19.6,
+      "risk_level": "Low"
+    }
+  ]
+}
