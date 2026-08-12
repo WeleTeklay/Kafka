@@ -27,5 +27,13 @@ def predict():
         "confidence": float(np.max(probability))
     })
 
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        "message": "Drought Prediction API is live!",
+        "endpoints": {
+            "predict": "Send a POST request to /predict with JSON payload {\"rainfall_mm\": value}"
+        }
+    })
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5002, debug=True)
