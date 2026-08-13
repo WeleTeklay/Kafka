@@ -13,6 +13,7 @@ def load_pipeline_data():
     try:
       with open(OUTPUT_JSON_PATH, "r") as f:
         data = json.load(f)
+        # Convert list of regions into a dictionary mapped by region name for quick lookup
         return {r["region"]: r for r in data.get("regions", [])}
     except Exception:
       pass
@@ -26,49 +27,12 @@ HTML_TEMPLATE = """
     <title>Drought Prediction System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.08); width: 420px; text-align: center; }
-        h2 { color: #2c3e50; margin-bottom: 5px; }
-        p { color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
-        
-        /* Modern Attractive Dropdown Styling */
-        .select-wrapper { position: relative; margin-bottom: 15px; }
-        select { 
-            width: 100%; 
-            padding: 12px 15px; 
-            background-color: #fdfdfd; 
-            border: 1.5px solid #dcdde1; 
-            border-radius: 8px; 
-            font-size: 15px; 
-            color: #2f3640; 
-            appearance: none; 
-            -webkit-appearance: none; 
-            -moz-appearance: none; 
-            cursor: pointer; 
-            transition: all 0.3s ease;
-        }
-        select:hover { border-color: #718093; }
-        select:focus { border-color: #0070f3; outline: none; box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.15); background-color: #fff; }
-        
-        /* Custom dropdown arrow indicator */
-        .select-wrapper::after {
-            content: '▼';
-            font-size: 11px;
-            color: #718093;
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-        }
-
-        input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1.5px solid #dcdde1; border-radius: 8px; font-size: 15px; box-sizing: border-box; transition: all 0.3s ease; }
-        input:focus { border-color: #0070f3; outline: none; box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.15); }
-
-        button { background-color: #0070f3; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; transition: background-color 0.2s; }
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 420px; text-align: center; }
+        select, input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { background-color: #0070f3; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; font-size: 16px; }
         button:hover { background-color: #0051cc; }
-        
-        #result { margin-top: 20px; font-weight: 500; color: #2f3640; text-align: left; font-size: 14px; line-height: 1.6; background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #0070f3; }
+        #result { margin-top: 15px; font-weight: bold; color: #333; text-align: left; font-size: 14px; line-height: 1.5; }
         .chart-container { position: relative; margin-top: 20px; height: 180px; width: 100%; }
     </style>
 </head>
@@ -77,19 +41,17 @@ HTML_TEMPLATE = """
         <h2>Drought Early-Warning</h2>
         <p>Select Region & Input Override (Optional)</p>
         
-        <div class="select-wrapper">
-            <select id="region">
-                <option value="Tigray">Tigray Region</option>
-                <option value="Amhara">Amhara Region</option>
-                <option value="Oromia">Oromia Region</option>
-                <option value="SNNPR">SNNPR Region</option>
-            </select>
-        </div>
+        <select id="region">
+            <option value="Tigray">Tigray</option>
+            <option value="Amhara">Amhara</option>
+            <option value="Oromia">Oromia</option>
+            <option value="SNNPR">SNNPR</option>
+        </select>
 
-        <input type="number" id="rainfall" step="0.1" placeholder="Override recent rainfall in mm (optional)">
+        <input type="number" id="rainfall" step="0.1" placeholder="Override recent rainfall in mm (leave blank to use pipeline data)">
         <button onclick="analyzeRegion()">Fetch Pipeline Analysis</button>
         
-        <div id="result">Select a region and click analyze to view pipeline results.</div>
+        <div id="result"></div>
         
         <div class="chart-container">
             <canvas id="riskChart"></canvas>
@@ -146,7 +108,7 @@ HTML_TEMPLATE = """
                         • Historical Avg: ${data.historical_avg_rainfall_mm} mm<br>
                         • Recent Avg / Input: ${data.recent_avg_rainfall_mm} mm<br>
                         • Deficit: <b>${data.deficit_pct}%</b><br>
-                        • Risk Level: <span style="color: ${color}; font-size: 15px;"><b>${data.risk_level} Risk</b></span>
+                        • Risk Level: <span style="color: ${color}; font-size: 16px;"><b>${data.risk_level} Risk</b></span>
                     `;
                     
                     updateChart(data.deficit_pct, data.risk_level);
@@ -175,6 +137,7 @@ def predict():
     region = req_data.get("region", "Tigray")
     custom_rainfall = req_data.get("rainfall_mm")
 
+    # Load data directly from output.json
     pipeline_data = load_pipeline_data()
 
     if region not in pipeline_data:
@@ -191,6 +154,7 @@ def predict():
     reg_info = pipeline_data[region]
     historical_avg = reg_info["historical_avg_rainfall_mm"]
 
+    # If user provided a custom input override, recalculate deficit and risk on the fly
     if custom_rainfall is not None:
       recent_avg = custom_rainfall
       if historical_avg > 0:
@@ -208,6 +172,7 @@ def predict():
       else:
         risk_level = "Low"
     else:
+      # Otherwise use the exact pre-calculated values straight from output.json
       recent_avg = reg_info["recent_avg_rainfall_mm"]
       deficit_pct = reg_info["deficit_pct"]
       risk_level = reg_info["risk_level"]
