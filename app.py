@@ -1,15 +1,17 @@
 import os
-import joblib
+import numpy as np
 from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
-# Load your trained model
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pkl")
-try:
-  model = joblib.load(MODEL_PATH)
-except Exception as e:
-  model = None
+# Baseline historical rainfall data per region (for realistic relative comparisons)
+REGIONAL_BASelines = {
+    "Tigray Region": [45.2, 48.0, 42.5, 46.1, 44.0],
+    "Amhara Region": [65.0, 70.2, 68.4, 62.1, 66.5],
+    "Oromia Region": [80.5, 85.0, 78.2, 82.1, 79.0],
+    "Somali Region": [20.1, 18.5, 22.0, 19.4, 21.0],
+    "SNNPR": [95.0, 98.2, 92.5, 96.0, 94.1],
+}
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -19,18 +21,18 @@ HTML_TEMPLATE = """
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 420px; text-align: center; }
         select, input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         button { background-color: #0070f3; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; font-size: 16px; }
         button:hover { background-color: #0051cc; }
-        #result { margin-top: 15px; font-weight: bold; color: #333; }
-        .chart-container { position: relative; margin-top: 20px; height: 200px; width: 100%; }
+        #result { margin-top: 15px; font-weight: bold; color: #333; text-align: left; font-size: 14px; line-height: 1.5; }
+        .chart-container { position: relative; margin-top: 20px; height: 180px; width: 100%; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>Drought Predictor</h2>
-        <p>Select Region & Enter Rainfall</p>
+        <p>Select Region & Enter Recent Rainfall</p>
         
         <select id="region">
             <option value="Tigray Region">Tigray Region</option>
@@ -40,8 +42,8 @@ HTML_TEMPLATE = """
             <option value="SNNPR">SNNPR</option>
         </select>
 
-        <input type="number" id="rainfall" step="0.1" placeholder="Rainfall in mm (e.g. 4.5)">
-        <button onclick="predictDrought()">Predict Risk & View Chart</button>
+        <input type="number" id="rainfall" step="0.1" placeholder="Recent Rainfall in mm">
+        <button onclick="predictDrought()">Analyze Region Risk</button>
         
         <div id="result"></div>
         
@@ -53,35 +55,28 @@ HTML_TEMPLATE = """
     <script>
         let myChart = null;
 
-        function updateChart(confidence, isHighRisk) {
+        function updateChart(deficitPct, riskLevel) {
             let ctx = document.getElementById('riskChart').getContext('2d');
-            let highRiskVal = isHighRisk ? confidence * 100 : (1 - confidence) * 100;
-            let lowRiskVal = 100 - highRiskVal;
+            let highVal = (riskLevel === 'High') ? deficitPct : Math.min(deficitPct, 50);
+            let lowVal = Math.max(0, 100 - deficitPct);
 
-            if (myChart) {
-                myChart.destroy();
-            }
+            if (myChart) { myChart.destroy(); }
 
             myChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['High/Medium Risk', 'Low Risk / Normal'],
+                    labels: ['Deficit %', 'Normal Baseline %'],
                     datasets: [{
-                        label: 'Probability (%)',
-                        data: [highRiskVal, lowRiskVal],
-                        backgroundColor: ['#d9534f', '#28a745'],
+                        data: [deficitPct, lowVal],
+                        backgroundColor: [riskLevel === 'High' ? '#d9534f' : '#f0ad4e', '#28a745'],
                         borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
+                    scales: { y: { beginAtZero: true, max: 100 } },
+                    plugins: { legend: { display: false } }
                 }
             });
         }
@@ -95,22 +90,27 @@ HTML_TEMPLATE = """
                 resultDiv.innerText = "Please enter a rainfall value!";
                 return;
             }
-            resultDiv.innerText = "Processing...";
+            resultDiv.innerText = "Processing analysis...";
             
             try {
                 let response = await fetch('/predict', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ rainfall_mm: parseFloat(val) })
+                    body: JSON.stringify({ region: region, rainfall_mm: parseFloat(val) })
                 });
                 let data = await response.json();
                 if(response.ok) {
-                    let color = (data.drought_prediction === 1) ? "#d9534f" : "#28a745";
-                    let confPercent = (data.confidence * 100).toFixed(1);
+                    let color = data.risk_level === 'High' ? '#d9534f' : (data.risk_level === 'Medium' ? '#f0ad4e' : '#28a745');
                     
-                    resultDiv.innerHTML = `<u>${region}</u><br>Risk: <span style="color: ${color};">${data.risk_status}</span><br>Confidence: ${confPercent}%`;
+                    resultDiv.innerHTML = `
+                        <u><b>${data.region} Analysis</b></u><br>
+                        • Historical Avg: ${data.historical_avg_rainfall_mm} mm<br>
+                        • Recent Rainfall: ${data.input_rainfall_mm} mm<br>
+                        • Deficit: <b>${data.deficit_pct}%</b><br>
+                        • Risk Level: <span style="color: ${color}; font-size: 16px;"><b>${data.risk_level} Risk</b></span>
+                    `;
                     
-                    updateChart(data.confidence, data.drought_prediction === 1);
+                    updateChart(data.deficit_pct, data.risk_level);
                 } else {
                     resultDiv.innerText = "Prediction failed.";
                 }
@@ -133,27 +133,38 @@ def home():
 def predict():
   try:
     data = request.get_json()
-    rainfall = float(data.get("rainfall_mm", 0.0))
+    region = data.get("region", "Tigray Region")
+    recent_rainfall = float(data.get("rainfall_mm", 0.0))
 
-    if model is not None:
-      prediction = model.predict([[rainfall]])[0]
-      if hasattr(model, "predict_proba"):
-        confidence = float(max(model.predict_proba([[rainfall]])[0]))
-      else:
-        confidence = 1.0
+    # Fetch historical baseline for the chosen region
+    historical_series = REGIONAL_BASelines.get(region, [50.0, 50.0, 50.0])
+    historical_avg = float(np.mean(historical_series))
+
+    # Calculate deficit percentage relative to historical regional average
+    if historical_avg > 0:
+      deficit_pct = round(
+          ((historical_avg - recent_rainfall) / historical_avg) * 100, 1
+      )
     else:
-      prediction = 1 if rainfall < 5.0 else 0
-      confidence = 0.95 if rainfall < 5.0 else 0.88
+      deficit_pct = 0.0
 
-    risk_status = (
-        "High/Medium Risk" if int(prediction) == 1 else "Low Risk / Normal"
-    )
+    # Ensure deficit doesn't drop below 0 for excess rainfall
+    deficit_pct = max(0.0, deficit_pct)
+
+    # Classify risk based on regional deficit percentage[cite: 1]
+    if deficit_pct > 50:
+      risk_level = "High"
+    elif deficit_pct > 25:
+      risk_level = "Medium"
+    else:
+      risk_level = "Low"
 
     return jsonify({
-        "input_rainfall_mm": rainfall,
-        "drought_prediction": int(prediction),
-        "risk_status": risk_status,
-        "confidence": confidence,
+        "region": region,
+        "historical_avg_rainfall_mm": round(historical_avg, 1),
+        "input_rainfall_mm": recent_rainfall,
+        "deficit_pct": deficit_pct,
+        "risk_level": risk_level,
     })
   except Exception as e:
     return jsonify({"error": str(e)}), 400
