@@ -19,6 +19,7 @@ Kafka/
 ├── requirements.txt           # Python dependencies
 ├── train_model.py             # Script used to train the machine learning model
 └── vercel.json                # Deployment configuration for Vercel
+
 🚀 Features
 Data Ingestion (fetch_rainfall.py): Automatically retrieves rainfall metrics from external sources or APIs.
 
