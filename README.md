@@ -6,17 +6,33 @@ An end-to-end data pipeline and machine learning application built using **Apach
 
 ## 📁 Project Structure
 
-Kafka/
-├── app.py                     # Main application / UI entry point
-├── drought_analysis.py        # Core logic for drought analysis and data processing
-├── drought_model.pkl          # Trained machine learning model for drought prediction
-├── fetch_rainfall.py          # Script to fetch live or historical rainfall data
-├── output.json                # Sample or generated JSON output data
-├── rainfall.csv               # Dataset containing rainfall records
-├── rainfall_batch_consumer.py # Kafka consumer for batch processing rainfall streams
-├── rainfall_producer.py       # Kafka producer to stream rainfall data
-├── requirements.txt           # Python dependencies
-├── train_model.py             # Script used to train the machine learning model
+Kafka/  <br>
+├── app.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&Ah, I see! Markdown treats single line breaks inside paragraphs as spaces, so the tree structure collapsed into a messy single paragraph. 
+
+To fix that so it copies as regular text (not a black code block) but keeps its vertical line-by-line tree layout, you need to use **double spaces at the end of each line** or use **HTML line breaks (`<br>`)**. 
+
+Here is the clean version ready for you to copy:
+
+```markdown
+# Real-Time Drought Analysis & Rainfall Pipeline with Kafka
+
+An end-to-end data pipeline and machine learning application built using **Apache Kafka**, Python, and machine learning models to fetch rainfall data, stream it via producers and consumers, analyze drought conditions, and serve insights through an application interface.
+
+---
+
+## 📁 Project Structure
+
+Kafka/<br>
+├── app.py                     # Main application / UI entry point<br>
+├── drought_analysis.py        # Core logic for drought analysis and data processing<br>
+├── drought_model.pkl          # Trained machine learning model for drought prediction<br>
+├── fetch_rainfall.py          # Script to fetch live or historical rainfall data<br>
+├── output.json                # Sample or generated JSON output data<br>
+├── rainfall.csv               # Dataset containing rainfall records<br>
+├── rainfall_batch_consumer.py # Kafka consumer for batch processing rainfall streams<br>
+├── rainfall_producer.py       # Kafka producer to stream rainfall data<br>
+├── requirements.txt           # Python dependencies<br>
+├── train_model.py             # Script used to train the machine learning model<br>
 └── vercel.json                # Deployment configuration for Vercel
 
 ---
@@ -37,5 +53,5 @@ Make sure you have **Python 3.8+** and a running instance of **Apache Kafka** (a
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
+   git clone https://github.com/your-username/your-repo-name.git
    cd your-repo-name/Kafka
